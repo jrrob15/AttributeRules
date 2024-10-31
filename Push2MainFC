@@ -1,0 +1,43 @@
+if ($feature.Marking_Status == "Completed") {
+    return ;
+}
+
+var parent_id = $feature.Parent_GUID;
+if (IsEmpty(parent_id))
+    return parent_id;
+
+// force to upper as the sql is case sensitive
+parent_id = Upper(parent_id);
+
+// Using the GDB name, get the parent classes records and Global ID field
+var parent_class = FeatureSetByName($datastore, "engcreator.ENG_PaveMarks_StripingCorridors", ['GlobalID', 'Last_Marking_Update','Next_Inspection_Date','Notes'], false);
+// Filter the parent class for only related features
+var parent_records = Filter(parent_class, "GlobalID = @parent_id");
+
+var updates = [];
+var i = 0;
+
+for (var row in parent_records) {
+    // If the parent row is null or has a different value, updated it
+    if (!IsEmpty(row['GlobalID']))
+    {
+        updates[i++] = {
+            'GlobalID': parent_id,
+            'attributes': {
+                "Last_Marking_Update": Date(Now()),
+                "Next_Inspection_Date": DateAdd(Date(Now()),3,"years")
+            }    
+        };
+    }
+}
+
+// Return the original value in the result parameter, as to not lost the entered value
+// Using the edit parameter,  return the class and list of updates
+return {
+'result': parent_id,
+'edit': [
+            {'className': "engcreator.ENG_PaveMarks_StripingCorridors",
+             'updates': updates
+            } 
+        ]
+};
